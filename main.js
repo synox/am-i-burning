@@ -2,53 +2,42 @@
 const { app, Tray, Menu } = require("electron");
 const spawn = require("child_process").spawn;
 
-let heated = false;
-let speed = 100;
-let ready = false;
+
 
 app.whenReady().then(() => {
   const tray = new Tray("./images/rocket.png");
   const pmset = spawn("pmset", ["-g", "thermlog"]);
   pmset.stdout.on("data", (data) => {
-    speed =
-      data.toString().indexOf("CPU_Speed_Limit \t= ") > -1
-        ? Number(
-            data.toString().slice(
-              data.toString().indexOf("CPU_Speed_Limit \t= ") + 19,
-              data.toString().indexOf("CPU_Speed_Limit \t= ") +
-                19 +
-                data
-                  .toString()
-                  .slice(data.toString().indexOf("CPU_Speed_Limit \t= ") + 19)
-                  .indexOf("\n")
-            )
-          )
-        : 101;
+
+    let heated = false;
+    let speed = 101;
+    let ready = false;
+
+    let re = /CPU_Scheduler_Limit 	= ([0-9]+)/;
+    let match = re.exec(data.toString());
+    if ( match ){
+      speed = Number(match[1])
+      ready = true;
+    }
 
     if (speed === 100) {
       heated = false;
-      ready = true;
-    }
-    if (speed < 100) {
+    } else if (speed < 80) {
       heated = true;
-      ready = true;
     }
-    if (speed === 101) {
-      heated = false;
-      ready = false;
+
+    if(ready){
+      tray.setImage(heated
+                  ? "./images/fire.png"
+                  : "./images/rocket.png");
+      tray.setTitle(`${speed}%`);
+      tray.setToolTip(data.toString());
+    } else {
+      tray.setImage("./images/clock.png");
+      tray.setTitle("Loading");
     }
-    tray.setImage(
-      !ready
-        ? "./images/clock.png"
-        : heated
-        ? "./images/fire.png"
-        : "./images/rocket.png"
-    );
-    if (ready) {
-      tray.setToolTip(heated ? "Stai andando a fuoco!" : "Tutto bene");
-    }
-    tray.setTitle(ready ? `${speed}%` : "Loading");
   });
+
   pmset.stderr.on("data", (data) => console.log("stderr: ", data.toString()));
   pmset.on("exit", (data) =>
     console.log("child process exited with code: ", data)
