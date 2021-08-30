@@ -6,9 +6,19 @@ Changes:
 - Made the rocket grayscale.
 - Added package-lock.json
 
+
+
 # Am i burning?
 
 Check if your mac is throttling it's CPU.
+
+# Usage
+
+Clone this repo. Then:
+```
+npm ci
+npm start
+```
 
 ## License
 
